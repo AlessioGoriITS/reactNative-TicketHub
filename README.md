@@ -35,7 +35,7 @@ Browser → frontend (React) → backend (FastAPI) → PostgreSQL
    docker compose up --build
    ```
 
-4. Aprire:
+4. Attendere che i healthcheck di database, API e frontend risultino `healthy`, quindi aprire:
 
    - frontend: `http://localhost:5173`;
    - API: `http://localhost:8000`;
@@ -43,6 +43,8 @@ Browser → frontend (React) → backend (FastAPI) → PostgreSQL
    - health check: `http://localhost:8000/health`.
 
 Per fermare i servizi, usare `docker compose down`. Il volume PostgreSQL viene mantenuto; per rimuoverlo esplicitamente si può usare `docker compose down -v`.
+
+In alternativa, se `make` è disponibile, sono inclusi i comandi `make up`, `make down`, `make logs`, `make build` e `make test`.
 
 ## Struttura del repository
 
