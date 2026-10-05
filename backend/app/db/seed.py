@@ -2,11 +2,11 @@
 
 from sqlalchemy import select
 
+from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import Category, Ticket, TicketMessage, TicketPriority, TicketStatus, User, UserRole
 
-
-DEMO_PASSWORD_HASH = "$2b$12$WJ0Hlax7R4cUYqgqsF3H3ef0Ewt0P7VWSBgnF3Aje.nmIfp7LgH56"
+DEMO_PASSWORD = "TicketHubDemo2026!"
 
 
 def get_or_create_user(
@@ -16,7 +16,7 @@ def get_or_create_user(
 
     if database_user is not None:
         return database_user
-    return User(name=name, email=email, role=role, password_hash=DEMO_PASSWORD_HASH)
+    return User(name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD))
 
 
 def seed() -> None:
