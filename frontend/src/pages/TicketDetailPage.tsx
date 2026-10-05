@@ -7,6 +7,17 @@ import { ErrorState, LoadingState } from '../components/Feedback'
 import { PriorityBadge, StatusBadge } from '../components/TicketBadges'
 import type { Ticket } from '../types'
 
+interface AiReplyResponse {
+  reply: string
+  source: 'ai' | 'fallback'
+  notice: string | null
+}
+
+interface AiClassificationResponse {
+  source: 'ai' | 'fallback'
+  notice: string | null
+}
+
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat('it-IT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
@@ -18,6 +29,7 @@ export function TicketDetailPage() {
   const [reply, setReply] = useState('')
   const [internal, setInternal] = useState(false)
   const [error, setError] = useState('')
+  const [aiNotice, setAiNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const isStaff = session?.user.role === 'agent' || session?.user.role === 'admin'
@@ -75,6 +87,28 @@ export function TicketDetailPage() {
     }
   }
 
+  const requestAi = async (action: 'classify' | 'suggest-reply') => {
+    if (!ticket) return
+    setSending(true)
+    setError('')
+    try {
+      if (action === 'classify') {
+        const response = await apiRequest<AiClassificationResponse>(`/ai/tickets/${ticket.id}/classify`, { method: 'POST', token: session?.token })
+        setAiNotice(response.notice ?? (response.source === 'ai' ? 'Analisi AI aggiornata.' : 'Analisi generata dal fallback locale.'))
+        await loadTicket()
+      } else {
+        const response = await apiRequest<AiReplyResponse>(`/ai/tickets/${ticket.id}/suggest-reply`, { method: 'POST', token: session?.token })
+        setReply(response.reply)
+        setInternal(false)
+        setAiNotice(response.notice ?? (response.source === 'ai' ? 'Bozza AI inserita nel messaggio.' : 'Bozza generata dal fallback locale.'))
+      }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError))
+    } finally {
+      setSending(false)
+    }
+  }
+
   if (loading) return <LoadingState label="Caricamento del ticket…" />
   if (error && !ticket) return <ErrorState message={error} />
   if (!ticket) return null
@@ -94,10 +128,12 @@ export function TicketDetailPage() {
           <div className="ticket-meta"><StatusBadge status={ticket.status} /><PriorityBadge priority={ticket.priority} />{ticket.category && <span className="category-chip">{ticket.category.name}</span>}</div>
         </div>
         <div className="ticket-actions">
+          {isStaff && <button className="button button-secondary" type="button" disabled={sending} onClick={() => void requestAi('classify')}>Analizza con AI</button>}
           {canResolve && <button className="button button-primary" type="button" disabled={sending} onClick={() => void performAction('resolve')}>Segna come risolto</button>}
           {canReopen && <button className="button button-secondary" type="button" disabled={sending} onClick={() => void performAction('reopen')}>Riapri ticket</button>}
         </div>
       </section>
+      {aiNotice && <p className="feedback loading">{aiNotice}</p>}
 
       <div className="detail-grid">
         <div className="page-stack">
@@ -119,6 +155,7 @@ export function TicketDetailPage() {
                 <textarea id="reply" rows={4} value={reply} onChange={(event) => setReply(event.target.value)} placeholder={internal ? 'Questa nota sarà visibile solo agli operatori.' : 'Scrivi un aggiornamento o una risposta…'} required />
                 <div className="form-actions reply-actions">
                   {isStaff && <label className="checkbox-label"><input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} /> Nota interna</label>}
+                  {isStaff && <button className="button button-secondary" type="button" disabled={sending} onClick={() => void requestAi('suggest-reply')}>Suggerisci risposta</button>}
                   <button className="button button-primary" type="submit" disabled={sending || !reply.trim()}>{sending ? 'Invio…' : 'Invia messaggio'}</button>
                 </div>
               </form>
