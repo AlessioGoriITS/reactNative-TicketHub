@@ -1,0 +1,72 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Node / React / TypeScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+.vite/
+.cache/
+coverage/
+
+# Python backend
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.envrc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+htmlcov/
+.coverage
+pip-wheel-metadata/
+
+# Databases and local application data
+*.db
+*.sqlite
+*.sqlite3
+database/data/
+postgres-data/
+uploads/
+storage/
+
+# Docker local overrides and logs
+docker-compose.override.yml
+*.log
+logs/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.code-workspace
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Generated documentation and reports
+reports/
+screenshots/generated/

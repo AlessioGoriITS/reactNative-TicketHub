@@ -1,0 +1,87 @@
+:root {
+  color: #102a43;
+  background: #edf2f7;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.landing-page {
+  display: grid;
+  min-height: 100vh;
+  padding: 2rem;
+  place-items: center;
+  background:
+    radial-gradient(circle at 15% 20%, rgb(49 130 206 / 18%), transparent 35rem),
+    radial-gradient(circle at 85% 80%, rgb(56 178 172 / 14%), transparent 35rem),
+    #edf2f7;
+}
+
+.landing-card {
+  width: min(100%, 42rem);
+  padding: clamp(2rem, 7vw, 4rem);
+  border: 1px solid #d9e2ec;
+  border-radius: 1.25rem;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 1.25rem 3.75rem rgb(16 42 67 / 12%);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  color: #2b6cb0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  margin: 0;
+  color: #102a43;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  line-height: 1;
+}
+
+.intro {
+  max-width: 34rem;
+  margin: 1.5rem 0 2rem;
+  color: #486581;
+  font-size: 1.125rem;
+  line-height: 1.65;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.75rem;
+  color: #1a365d;
+  background: #ebf8ff;
+  font-size: 0.875rem;
+}
+
+.status-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: #38a169;
+  box-shadow: 0 0 0 0.2rem rgb(56 161 105 / 16%);
+}
