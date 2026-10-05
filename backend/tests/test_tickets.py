@@ -72,6 +72,13 @@ def test_customers_cannot_read_tickets_created_by_other_customers(client) -> Non
     )
     assert internal_note.status_code == 403
 
+    priority_change = client.patch(
+        f"/api/tickets/{ticket['id']}",
+        headers=headers(first_token),
+        json={"priority": "urgent"},
+    )
+    assert priority_change.status_code == 403
+
 
 def test_operator_can_assign_resolve_and_add_internal_note(client) -> None:
     customer_token, _ = register_and_token(client, "owner@example.com", "Cliente Owner")

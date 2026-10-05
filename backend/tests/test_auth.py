@@ -38,3 +38,13 @@ def test_profile_requires_a_valid_token(client) -> None:
     response = client.get("/api/auth/me")
 
     assert response.status_code == 401
+
+
+def test_login_does_not_disclose_whether_an_account_exists(client) -> None:
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "missing@example.com", "password": "PasswordDemo2026!"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Email o password non validi."
