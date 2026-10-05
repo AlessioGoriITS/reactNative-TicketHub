@@ -15,6 +15,7 @@ export interface Category {
   id: number
   name: string
   description: string | null
+  is_active?: boolean
 }
 
 export interface TicketMessage {
@@ -48,6 +49,16 @@ export interface PaginatedTickets {
   total: number
   page: number
   page_size: number
+}
+
+export interface DashboardSummary {
+  total_tickets: number
+  open_tickets: number
+  in_progress_tickets: number
+  urgent_tickets: number
+  resolved_tickets: number
+  unassigned_tickets: number
+  average_resolution_hours: number | null
 }
 
 export interface AuthResponse {

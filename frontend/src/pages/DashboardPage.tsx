@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { apiRequest, getErrorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { ErrorState, LoadingState } from '../components/Feedback'
 import { PriorityBadge, StatusBadge } from '../components/TicketBadges'
-import type { PaginatedTickets, Ticket } from '../types'
+import type { DashboardSummary, PaginatedTickets, Ticket } from '../types'
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value))
@@ -14,15 +14,22 @@ function formatDate(value: string) {
 export function DashboardPage() {
   const { session } = useAuth()
   const [tickets, setTickets] = useState<Ticket[]>([])
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const isCustomer = session?.user.role === 'customer'
 
   useEffect(() => {
     let active = true
-    apiRequest<PaginatedTickets>('/tickets?page_size=100', { token: session?.token })
-      .then((response) => {
-        if (active) setTickets(response.items)
+    Promise.all([
+      apiRequest<PaginatedTickets>('/tickets?page_size=100', { token: session?.token }),
+      apiRequest<DashboardSummary>('/dashboard/summary', { token: session?.token }),
+    ])
+      .then(([ticketsResponse, summaryResponse]) => {
+        if (active) {
+          setTickets(ticketsResponse.items)
+          setSummary(summaryResponse)
+        }
       })
       .catch((requestError) => {
         if (active) setError(getErrorMessage(requestError))
@@ -34,15 +41,6 @@ export function DashboardPage() {
       active = false
     }
   }, [session?.token])
-
-  const metrics = useMemo(
-    () => ({
-      open: tickets.filter((ticket) => ['open', 'in_progress', 'waiting_for_customer'].includes(ticket.status)).length,
-      urgent: tickets.filter((ticket) => ticket.priority === 'urgent').length,
-      resolved: tickets.filter((ticket) => ticket.status === 'resolved').length,
-    }),
-    [tickets],
-  )
 
   if (loading) return <LoadingState label="Caricamento della dashboard…" />
   if (error) return <ErrorState message={error} />
@@ -59,10 +57,10 @@ export function DashboardPage() {
       </div>
 
       <div className="metric-grid">
-        <article className="metric-card"><span>Ticket visibili</span><strong>{tickets.length}</strong><small>Totale richieste</small></article>
-        <article className="metric-card"><span>Da gestire</span><strong>{metrics.open}</strong><small>Aperti o in lavorazione</small></article>
-        <article className="metric-card"><span>Urgenti</span><strong>{metrics.urgent}</strong><small>Richiedono attenzione</small></article>
-        <article className="metric-card"><span>Risolti</span><strong>{metrics.resolved}</strong><small>In attesa di chiusura</small></article>
+        <article className="metric-card"><span>Ticket visibili</span><strong>{summary?.total_tickets ?? 0}</strong><small>Totale richieste</small></article>
+        <article className="metric-card"><span>Da gestire</span><strong>{(summary?.open_tickets ?? 0) + (summary?.in_progress_tickets ?? 0)}</strong><small>Aperti o in lavorazione</small></article>
+        <article className="metric-card"><span>Urgenti</span><strong>{summary?.urgent_tickets ?? 0}</strong><small>Richiedono attenzione</small></article>
+        <article className="metric-card"><span>{isCustomer ? 'Risolti' : 'Non assegnati'}</span><strong>{isCustomer ? (summary?.resolved_tickets ?? 0) : (summary?.unassigned_tickets ?? 0)}</strong><small>{isCustomer ? 'In attesa di chiusura' : 'Da assegnare al supporto'}</small></article>
       </div>
 
       <section className="panel">

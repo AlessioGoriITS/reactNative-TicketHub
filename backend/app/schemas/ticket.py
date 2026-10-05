@@ -18,8 +18,20 @@ class CategoryResponse(BaseModel):
     id: int
     name: str
     description: str | None
+    is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CategoryCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+
+
+class CategoryUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    is_active: bool | None = None
 
 
 class TicketMessageResponse(BaseModel):
@@ -87,3 +99,13 @@ class TicketListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class DashboardSummaryResponse(BaseModel):
+    total_tickets: int
+    open_tickets: int
+    in_progress_tickets: int
+    urgent_tickets: int
+    resolved_tickets: int
+    unassigned_tickets: int
+    average_resolution_hours: float | None
