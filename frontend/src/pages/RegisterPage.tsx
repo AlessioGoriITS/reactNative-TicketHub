@@ -38,7 +38,8 @@ export function RegisterPage() {
     <section className="auth-page">
       <div className="auth-visual" aria-hidden="true">
         <span className="brand-mark">T</span>
-        <p>Richieste chiare, risposte migliori.</p>
+        <div className="auth-visual-copy"><p>Richieste chiare, risposte migliori.</p><span>Segui ogni aggiornamento in un unico spazio sicuro.</span></div>
+        <div className="auth-stat"><strong>Supporto organizzato</strong><span>Dal primo messaggio alla risoluzione</span></div>
       </div>
       <div className="auth-card-wrap">
         <form className="auth-card" onSubmit={submit}>

@@ -39,7 +39,8 @@ export function LoginPage() {
     <section className="auth-page">
       <div className="auth-visual" aria-hidden="true">
         <span className="brand-mark">T</span>
-        <p>Assistenza che lascia il segno.</p>
+        <div className="auth-visual-copy"><p>Assistenza chiara, sempre sotto controllo.</p><span>Una workspace professionale per clienti e team di supporto.</span></div>
+        <div className="auth-stat"><strong>AI locale</strong><span>Priorità e sintesi automatiche</span></div>
       </div>
       <div className="auth-card-wrap">
         <form className="auth-card" onSubmit={submit}>

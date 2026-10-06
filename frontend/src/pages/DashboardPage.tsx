@@ -45,6 +45,13 @@ export function DashboardPage() {
   if (loading) return <LoadingState label="Caricamento della dashboard…" />
   if (error) return <ErrorState message={error} />
 
+  const metrics = [
+    { label: 'Ticket visibili', value: summary?.total_tickets ?? 0, detail: 'Totale richieste', icon: '▤', tone: 'blue' },
+    { label: 'Da gestire', value: (summary?.open_tickets ?? 0) + (summary?.in_progress_tickets ?? 0), detail: 'Aperti o in lavorazione', icon: '◌', tone: 'amber' },
+    { label: 'Urgenti', value: summary?.urgent_tickets ?? 0, detail: 'Richiedono attenzione', icon: '!', tone: 'rose' },
+    { label: isCustomer ? 'Risolti' : 'Non assegnati', value: isCustomer ? (summary?.resolved_tickets ?? 0) : (summary?.unassigned_tickets ?? 0), detail: isCustomer ? 'In attesa di chiusura' : 'Da assegnare al supporto', icon: isCustomer ? '✓' : '→', tone: 'mint' },
+  ]
+
   return (
     <section className="page-stack">
       <div className="page-heading">
@@ -57,10 +64,7 @@ export function DashboardPage() {
       </div>
 
       <div className="metric-grid">
-        <article className="metric-card"><span>Ticket visibili</span><strong>{summary?.total_tickets ?? 0}</strong><small>Totale richieste</small></article>
-        <article className="metric-card"><span>Da gestire</span><strong>{(summary?.open_tickets ?? 0) + (summary?.in_progress_tickets ?? 0)}</strong><small>Aperti o in lavorazione</small></article>
-        <article className="metric-card"><span>Urgenti</span><strong>{summary?.urgent_tickets ?? 0}</strong><small>Richiedono attenzione</small></article>
-        <article className="metric-card"><span>{isCustomer ? 'Risolti' : 'Non assegnati'}</span><strong>{isCustomer ? (summary?.resolved_tickets ?? 0) : (summary?.unassigned_tickets ?? 0)}</strong><small>{isCustomer ? 'In attesa di chiusura' : 'Da assegnare al supporto'}</small></article>
+        {metrics.map((metric) => <article className={`metric-card metric-${metric.tone}`} key={metric.label}><span className="metric-icon" aria-hidden="true">{metric.icon}</span><div><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.detail}</small></div></article>)}
       </div>
 
       <section className="panel">

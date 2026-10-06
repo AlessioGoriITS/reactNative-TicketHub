@@ -48,6 +48,7 @@ export function NewTicketPage() {
       <div className="page-heading"><div><p className="eyebrow">NUOVA RICHIESTA</p><h1>Come possiamo aiutarti?</h1><p className="muted">Descrivi il problema: l'AI locale assegnerà automaticamente titolo, priorità e sintesi.</p></div></div>
       <form className="panel form-panel" onSubmit={submit}>
         {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="ai-assist-banner"><span className="ai-assist-icon" aria-hidden="true">✦</span><div><strong>Analisi AI locale</strong><p>Al momento dell’invio, Ollama genererà titolo, sintesi e priorità del ticket.</p></div></div>
         <label>Descrizione<textarea value={description} onChange={(event) => setDescription(event.target.value)} minLength={10} maxLength={10_000} placeholder="Indica cosa stavi facendo, cosa ti aspettavi e che cosa è accaduto." rows={7} required /></label>
         <label>Categoria (facoltativa)<select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Non specificata</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
         <div className="form-actions"><button className="button button-primary" type="submit" disabled={submitting}>{submitting ? 'Analisi AI e invio…' : 'Invia ticket'}</button></div>
