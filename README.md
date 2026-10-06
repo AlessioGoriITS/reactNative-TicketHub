@@ -138,9 +138,9 @@ Il seed viene eseguito una sola volta sul database inizialmente vuoto.
 
 | Ruolo | Email | Password |
 | --- | --- | --- |
-| Amministratore | `admin@tickethub.local` | `TicketHubDemo2026!` |
-| Operatore | `operatore@tickethub.local` | `TicketHubDemo2026!` |
-| Cliente | `cliente@tickethub.local` | `TicketHubDemo2026!` |
+| Amministratore | `admin@tickethub.com` | `TicketHubDemo2026!` |
+| Operatore | `operatore@tickethub.com` | `TicketHubDemo2026!` |
+| Cliente | `cliente@tickethub.com` | `TicketHubDemo2026!` |
 
 Vengono creati anche quattro categorie, due ticket e messaggi di esempio. Queste credenziali sono esclusivamente per la demo e non devono essere riutilizzate fuori dall’ambiente locale.
 

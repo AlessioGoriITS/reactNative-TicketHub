@@ -20,15 +20,29 @@ def get_or_create_user(
 
 
 def seed() -> None:
-    """Add demo accounts, categories and tickets if the database is empty."""
+    """Add demo data and upgrade legacy demo-email addresses when necessary."""
 
     with SessionLocal() as database:
+        # ``.local`` is rejected by the email validator used by the login API.
+        # Update old development databases without requiring a Docker reset.
+        legacy_demo_emails = {
+            "admin@tickethub.local": "admin@tickethub.com",
+            "operatore@tickethub.local": "operatore@tickethub.com",
+            "cliente@tickethub.local": "cliente@tickethub.com",
+        }
+        for legacy_email, valid_email in legacy_demo_emails.items():
+            user = database.scalar(select(User).where(User.email == legacy_email))
+            if user is not None:
+                user.email = valid_email
+
+        database.flush()
         if database.scalar(select(User.id).limit(1)) is not None:
+            database.commit()
             return
 
-        admin = get_or_create_user("admin@tickethub.local", "Amministratore Demo", UserRole.ADMIN)
-        agent = get_or_create_user("operatore@tickethub.local", "Giulia Bianchi", UserRole.AGENT)
-        customer = get_or_create_user("cliente@tickethub.local", "Marco Rossi", UserRole.CUSTOMER)
+        admin = get_or_create_user("admin@tickethub.com", "Amministratore Demo", UserRole.ADMIN)
+        agent = get_or_create_user("operatore@tickethub.com", "Giulia Bianchi", UserRole.AGENT)
+        customer = get_or_create_user("cliente@tickethub.com", "Marco Rossi", UserRole.CUSTOMER)
         database.add_all([admin, agent, customer])
 
         technical = Category(name="Problema tecnico", description="Accesso, errori e malfunzionamenti.")

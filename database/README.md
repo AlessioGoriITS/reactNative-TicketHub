@@ -16,4 +16,4 @@ alembic upgrade head
 python -m app.db.seed
 ```
 
-Il seed crea gli account demo `admin@tickethub.local`, `operatore@tickethub.local` e `cliente@tickethub.local`, oltre a categorie, ticket e messaggi. Le credenziali saranno documentate nel README quando l’autenticazione sarà disponibile.
+Il seed crea gli account demo `admin@tickethub.com`, `operatore@tickethub.com` e `cliente@tickethub.com`, oltre a categorie, ticket e messaggi. Le credenziali sono documentate nel README.
