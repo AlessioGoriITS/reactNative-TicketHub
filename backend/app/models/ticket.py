@@ -30,17 +30,34 @@ class Ticket(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[TicketStatus] = mapped_column(
-        Enum(TicketStatus, name="ticket_status"), nullable=False, default=TicketStatus.OPEN
+        Enum(
+            TicketStatus,
+            name="ticket_status",
+            values_callable=lambda enum_type: [member.value for member in enum_type],
+        ),
+        nullable=False,
+        default=TicketStatus.OPEN,
     )
     priority: Mapped[TicketPriority] = mapped_column(
-        Enum(TicketPriority, name="ticket_priority"), nullable=False, default=TicketPriority.MEDIUM
+        Enum(
+            TicketPriority,
+            name="ticket_priority",
+            values_callable=lambda enum_type: [member.value for member in enum_type],
+        ),
+        nullable=False,
+        default=TicketPriority.MEDIUM,
     )
     category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"))
     customer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     assigned_to_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     ai_summary: Mapped[str | None] = mapped_column(Text)
     ai_suggested_priority: Mapped[TicketPriority | None] = mapped_column(
-        Enum(TicketPriority, name="ticket_priority"), nullable=True
+        Enum(
+            TicketPriority,
+            name="ticket_priority",
+            values_callable=lambda enum_type: [member.value for member in enum_type],
+        ),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

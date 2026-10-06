@@ -13,7 +13,9 @@ COPY app ./app
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY scripts ./scripts
-RUN chmod +x ./scripts/start.sh
+# The repository may be checked out on Windows, where shell scripts use CRLF.
+# Normalise the entrypoint inside the Linux image before executing it.
+RUN sed -i 's/\r$//' ./scripts/start.sh && chmod +x ./scripts/start.sh
 
 EXPOSE 8000
 
