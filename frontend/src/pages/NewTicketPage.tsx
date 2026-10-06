@@ -45,10 +45,9 @@ export function NewTicketPage() {
 
   return (
     <section className="page-stack narrow-page">
-      <div className="page-heading"><div><p className="eyebrow">NUOVA RICHIESTA</p><h1>Come possiamo aiutarti?</h1><p className="muted">Descrivi il problema con più dettagli possibili: penseremo noi a organizzare la richiesta.</p></div></div>
+      <div className="page-heading"><div><p className="eyebrow">NUOVA RICHIESTA</p><h1>Come possiamo aiutarti?</h1><p className="muted">Seleziona il prodotto e descrivi il problema.</p></div></div>
       <form className="panel form-panel" onSubmit={submit}>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="ai-assist-banner"><span className="ai-assist-icon" aria-hidden="true">✦</span><div><strong>Richiesta organizzata automaticamente</strong><p>Seleziona il prodotto interessato: titolo, priorità, sintesi e categoria verranno definiti in base ai dettagli che ci fornisci.</p></div></div>
         <label>Prodotto interessato<select value={productId} onChange={(event) => setProductId(event.target.value)} required><option value="" disabled>Seleziona un prodotto</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name} — {product.description}</option>)}</select></label>
         <label>Descrizione<textarea value={description} onChange={(event) => setDescription(event.target.value)} minLength={10} maxLength={10_000} placeholder="Indica cosa stavi facendo, cosa ti aspettavi e che cosa è accaduto." rows={7} required /></label>
         <div className="form-actions"><button className="button button-primary" type="submit" disabled={submitting}>{submitting ? 'Invio della richiesta…' : 'Invia ticket'}</button></div>

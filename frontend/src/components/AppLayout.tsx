@@ -31,7 +31,7 @@ export function AppLayout() {
         <nav className="main-nav" aria-label="Navigazione principale">
           <p className="nav-label">Workspace</p>
           <NavLink end to="/"><span aria-hidden="true">⌂</span> Panoramica</NavLink>
-          <NavLink to="/tickets"><span aria-hidden="true">▤</span> Ticket</NavLink>
+          <NavLink to="/tickets" className={({ isActive }) => isActive && location.pathname !== '/tickets/new' ? 'active' : ''} aria-current={location.pathname === '/tickets/new' ? false : undefined}><span aria-hidden="true">▤</span> Ticket</NavLink>
           {isCustomer && <NavLink to="/tickets/new"><span aria-hidden="true">＋</span> Nuovo ticket</NavLink>}
         </nav>
         <div className="account-panel">

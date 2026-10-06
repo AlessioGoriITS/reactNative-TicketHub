@@ -409,6 +409,7 @@ def add_ticket_message(
         is_internal=payload.is_internal,
     )
     database.add(message)
+    ticket.updated_at = datetime.now(timezone.utc)
     record_audit_event(
         database,
         "ticket.message_added",

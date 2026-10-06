@@ -1,6 +1,8 @@
 from conftest import TestingSessionLocal
+from datetime import datetime, timezone
+import pytest
 
-from app.models import Product, User, UserRole
+from app.models import Product, Ticket, User, UserRole
 
 
 def register_and_token(client, email: str, name: str = "Cliente Ticket") -> tuple[str, int]:
@@ -164,3 +166,31 @@ def test_customer_cannot_set_ticket_title_or_priority_at_creation(client) -> Non
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("internal", [False, True])
+def test_message_updates_ticket_timestamp_order_and_note_visibility(client, internal):
+    customer_token, _ = register_and_token(client, "message-owner@example.com")
+    ticket_ids = []
+    for _ in range(2):
+        result = client.post("/api/tickets", headers=headers(customer_token), json={
+            "description": "Il report mensile non viene esportato correttamente."
+        })
+        assert result.status_code == 201
+        ticket_ids.append(result.json()["id"])
+    agent_token, agent_id = register_and_token(client, "message-agent@example.com")
+    with TestingSessionLocal() as database:
+        database.get(User, agent_id).role = UserRole.AGENT
+        database.get(Ticket, ticket_ids[0]).updated_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        database.get(Ticket, ticket_ids[1]).updated_at = datetime(2021, 1, 1, tzinfo=timezone.utc)
+        database.commit()
+    before = client.get(f"/api/tickets/{ticket_ids[0]}", headers=headers(customer_token)).json()
+    message = client.post(f"/api/tickets/{ticket_ids[0]}/messages", headers=headers(agent_token), json={
+        "body": "Aggiornamento di verifica.", "is_internal": internal
+    })
+    assert message.status_code == 201
+    detail = client.get(f"/api/tickets/{ticket_ids[0]}", headers=headers(customer_token)).json()
+    assert detail["updated_at"] > before["updated_at"]
+    assert len(detail["messages"]) == (0 if internal else 1)
+    listing = client.get("/api/tickets", headers=headers(customer_token)).json()
+    assert listing["items"][0]["id"] == ticket_ids[0]

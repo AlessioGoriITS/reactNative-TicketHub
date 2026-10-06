@@ -54,7 +54,7 @@ L’AI è integrata nel backend, non nel browser. Alla creazione di un ticket il
 - sintesi breve salvata nel ticket.
 - categoria scelta tra quelle attive configurate dall’amministratore.
 
-Il cliente non può inviare né modificare titolo, priorità o categoria: queste proprietà sono calcolate dal backend e salvate insieme al ticket. Se non viene individuata una categoria affidabile, la categoria resta non specificata. Un operatore può ricalcolare la sintesi e ottenere una bozza di risposta; quest’ultima non viene mai inviata automaticamente.
+Il cliente non può inviare né modificare titolo, priorità o categoria: queste proprietà sono calcolate dal backend e salvate insieme al ticket. I nuovi titoli generati hanno un limite di 120 caratteri; i titoli esistenti non vengono riscritti durante la riclassificazione. Se il modello restituisce una categoria vuota o non valida, il backend prova una classificazione deterministica dalla descrizione, sempre limitata alle categorie attive. Se non viene individuata una corrispondenza ragionevole, la categoria resta non specificata. Un operatore può ricalcolare la sintesi e ottenere una bozza di risposta; quest’ultima non viene mai inviata automaticamente.
 
 Docker Compose avvia Ollama e scarica automaticamente il modello `llama3.2:1b` al primo avvio. Se il servizio o il modello non fosse momentaneamente disponibile, il backend applica un fallback deterministico, registra la fonte nell’audit log e continua a creare il ticket senza bloccare il cliente.
 
@@ -279,6 +279,7 @@ I prodotti sono dati fittizi e servono esclusivamente a simulare un contesto di 
 - Le password sono memorizzate con hash bcrypt; non vengono mai salvate in chiaro.
 - Le API proteggono le operazioni tramite JWT e controlli di ruolo lato backend.
 - Le note interne non vengono restituite agli account cliente.
+- Messaggi pubblici e note interne aggiornano la data del ticket e il suo ordine nelle attività recenti.
 - Le azioni importanti sono registrate in `audit_logs`.
 - Il progetto non invia email reali e non carica ancora allegati fisici: la tabella è predisposta ma lo storage non è implementato.
 - L’AI può produrre classificazioni imprecise: gli operatori devono verificare priorità e categoria assegnate automaticamente.

@@ -38,19 +38,47 @@ def _extract_json(content: str) -> dict[str, object]:
     return decoded
 
 
+def _trim_title(text: str) -> str:
+    text = re.sub(r"\s+", " ", text).strip().strip('"')
+    text = re.sub(r"^test manuale(?: di consegna)?\s*[:;,-]?\s*", "", text, flags=re.IGNORECASE)
+    if len(text) > 120:
+        text = text[:121].rsplit(" ", 1)[0] if " " in text[:121] else text[:120]
+    return text[:120].rstrip(" ,;:-")
+
+
 def _fallback_title(description: str) -> str:
     """Create a useful title when Ollama is temporarily unavailable."""
 
-    compact_description = re.sub(r"\s+", " ", description).strip()
+    compact_description = _trim_title(description)
     first_sentence = re.split(r"[.!?]\s|\n", compact_description, maxsplit=1)[0].strip()
     if len(first_sentence) < 5:
         return "Richiesta di assistenza"
-    return first_sentence[:200].rstrip(" ,;:-")
+    return _trim_title(first_sentence)
 
 
 def _normalise_title(value: object, description: str) -> str:
-    title = re.sub(r"\s+", " ", str(value or "")).strip().strip('"')
-    return title[:200].rstrip() if len(title) >= 5 else _fallback_title(description)
+    title = _trim_title(value) if isinstance(value, str) else ""
+    return title if len(title) >= 5 else _fallback_title(description)
+
+
+def _category_for_description(description: str) -> str | None:
+    text = description.casefold()
+    if any(term in text for term in ("errore", "bug", "blocc", "non funziona", "malfunzionamento", "error 500", "http 500")):
+        return "Problema tecnico"
+    if any(term in text for term in ("fattura", "pagamento", "rimborso", "addebito")):
+        return "Fatturazione"
+    if any(term in text for term in ("login", "accesso", "password", "account")):
+        return "Account"
+    return None
+
+
+def _resolve_category(value: object, description: str, available_categories: list[str]) -> str | None:
+    active = {name.strip().casefold(): name for name in available_categories}
+    suggested = value.strip().casefold() if isinstance(value, str) else ""
+    if suggested in active:
+        return active[suggested]
+    fallback = _category_for_description(description)
+    return active.get(fallback.casefold()) if fallback else None
 
 
 def _apply_priority_guardrail(priority: TicketPriority, text: str) -> TicketPriority:
@@ -70,18 +98,12 @@ def _apply_priority_guardrail(priority: TicketPriority, text: str) -> TicketPrio
 
 
 def _fallback_classification(
-    description: str, title_hint: str | None = None, notice: str | None = None
+    description: str, title_hint: str | None = None, notice: str | None = None,
+    available_categories: list[str] | None = None,
 ) -> AIClassification:
     title = _normalise_title(title_hint, description)
     text = f"{title} {description}".lower()
-    if any(term in text for term in ("fattura", "pagamento", "rimborso", "addebito")):
-        category = "Fatturazione"
-    elif any(term in text for term in ("login", "accesso", "password", "account")):
-        category = "Account"
-    elif any(term in text for term in ("errore", "bug", "blocco", "non funziona", "malfunzionamento")):
-        category = "Problema tecnico"
-    else:
-        category = None
+    category = _resolve_category(None, description, available_categories or [])
 
     priority = _apply_priority_guardrail(TicketPriority.MEDIUM, text)
 
@@ -153,7 +175,10 @@ def _classify_ticket_content(
                 "Sei un assistente per un helpdesk italiano. Rispondi soltanto con JSON valido: "
                 '{"title":"...","summary":"...","suggested_priority":"low|medium|high|urgent",'
                 '"suggested_category":"... o null","keywords":["..."]}. '
-                "Genera un titolo chiaro di 5-120 caratteri, non inventare informazioni e mantieni "
+                "Genera un titolo diretto in italiano, preferibilmente di 40-80 caratteri e mai oltre 120. "
+                "Descrivi solo il problema, senza preamboli come 'Test manuale di consegna', "
+                "ripetizioni o dettagli inutili. Esempio: 'Errore nell’esportazione PDF del report mensile'. "
+                "Non inventare informazioni e mantieni "
                 "il riassunto sotto le 240 battute. Considera urgente solo un blocco grave, un rischio "
                 "di sicurezza, una perdita di dati o un impatto diffuso. "
                 f"Per suggested_category usa esclusivamente uno di questi valori esatti o null: "
@@ -183,12 +208,12 @@ def _classify_ticket_content(
             title,
             summary[:240],
             priority,
-            str(category).strip() if category else None,
+            _resolve_category(category, description, available_categories or []),
             keywords,
             "ai",
         )
     except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError, RuntimeError) as error:
-        return _fallback_classification(description, title_hint, f"AI non disponibile: {error}")
+        return _fallback_classification(description, title_hint, f"AI non disponibile: {error}", available_categories)
 
 
 def analyze_new_ticket(description: str, available_categories: list[str]) -> AIClassification:
