@@ -2,7 +2,7 @@
 
 TicketHub è una piattaforma full-stack per la gestione professionale delle richieste di assistenza clienti. Clienti, operatori e amministratori lavorano sullo stesso flusso: apertura, classificazione, conversazione, assegnazione, risoluzione e analisi delle richieste.
 
-Il progetto è un monorepo avviabile in locale tramite Docker Compose. Include database PostgreSQL, API REST documentata, frontend web, autenticazione JWT, ruoli, dati demo, test e una funzionalità AI per classificare i ticket e suggerire risposte modificabili dagli operatori.
+Il progetto è un monorepo avviabile in locale tramite Docker Compose. Include database PostgreSQL, API REST documentata, frontend web, autenticazione JWT, ruoli, dati demo, test e Ollama locale per generare automaticamente titolo, priorità e sintesi dei ticket.
 
 ## Indice
 
@@ -23,7 +23,7 @@ Il progetto è un monorepo avviabile in locale tramite Docker Compose. Include d
 ### Clienti
 
 - registrazione, login e profilo tramite token JWT;
-- apertura di ticket con categoria e priorità;
+- apertura di ticket con sola descrizione e categoria facoltativa;
 - ricerca, filtri e storico dei propri ticket;
 - conversazione con il supporto;
 - riapertura di un ticket risolto;
@@ -36,7 +36,7 @@ Il progetto è un monorepo avviabile in locale tramite Docker Compose. Include d
 - note interne, invisibili ai clienti;
 - risoluzione dei ticket;
 - dashboard operativa;
-- classificazione AI e suggerimento di risposta, sempre modificabili prima dell’uso.
+- sintesi AI ricalcolabile e suggerimento di risposta, sempre modificabili prima dell’uso.
 
 ### Amministratori
 
@@ -47,13 +47,15 @@ Il progetto è un monorepo avviabile in locale tramite Docker Compose. Include d
 
 ### Intelligenza artificiale
 
-L’AI è integrata nel backend, non nel browser. Un operatore può:
+L’AI è integrata nel backend, non nel browser. Alla creazione di un ticket il backend invia la descrizione a **Ollama locale** e riceve un JSON strutturato con:
 
-- ottenere un riassunto del ticket;
-- ricevere categoria, priorità e parole chiave suggerite;
-- generare una bozza di risposta professionale.
+- titolo del ticket generato automaticamente;
+- priorità `low`, `medium`, `high` o `urgent`;
+- sintesi breve salvata nel ticket.
 
-Nessuna risposta viene inviata automaticamente e l’AI non cambia autonomamente priorità, categoria o stato. Se nessun provider è configurato oppure il provider non risponde, le API forniscono un fallback locale esplicitamente identificato: il resto dell’applicazione continua a funzionare.
+Il cliente non può inviare né modificare titolo e priorità: queste proprietà sono calcolate dal backend e salvate insieme al ticket. Un operatore può ricalcolare la sintesi e ottenere una bozza di risposta; quest’ultima non viene mai inviata automaticamente.
+
+Docker Compose avvia Ollama e scarica automaticamente il modello `llama3.2:1b` al primo avvio. Se il servizio o il modello non fosse momentaneamente disponibile, il backend applica un fallback deterministico, registra la fonte nell’audit log e continua a creare il ticket senza bloccare il cliente.
 
 ## Architettura e tecnologie
 
@@ -63,8 +65,7 @@ Browser
    ▼
 React + TypeScript + Vite ───────► FastAPI REST API ───────► PostgreSQL 16
                                          │
-                                         ├── OpenAI / provider compatibile
-                                         └── Ollama locale opzionale
+                                         └── Ollama locale (container Docker)
 ```
 
 | Componente | Tecnologia | Responsabilità |
@@ -73,7 +74,7 @@ React + TypeScript + Vite ───────► FastAPI REST API ────
 | Backend | Python, FastAPI, SQLAlchemy, Alembic | API REST, regole di business, ruoli, audit e AI |
 | Database | PostgreSQL 16 | utenti, categorie, ticket, messaggi, allegati e audit log |
 | Container | Docker Compose, Nginx | avvio coerente dei servizi e distribuzione del frontend |
-| AI | OpenAI-compatible API o Ollama | classificazione e suggerimenti per gli operatori |
+| AI | Ollama + `llama3.2:1b` | titolo, priorità e sintesi automatica dei ticket |
 
 Per i dettagli dei flussi e della struttura dei dati, consultare [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
@@ -83,9 +84,11 @@ Per i dettagli dei flussi e della struttura dei dati, consultare [docs/ARCHITECT
 
 - Git;
 - Docker Desktop avviato, con Docker Compose v2;
-- porte locali `5173`, `8000` e `5432` disponibili.
+- porte locali `5173`, `8000`, `5432` e `11434` disponibili;
+- connessione Internet al primo avvio, per scaricare l’immagine e il modello locale (circa 1,3 GB).
+- almeno 12 GB liberi nello spazio gestito da Docker Desktop: l’immagine ufficiale di Ollama include i runtime CPU/GPU e può occupare circa 9,4 GB, a cui si aggiunge il modello.
 
-Non sono richiesti Node.js, Python, PostgreSQL o un provider AI per il percorso standard: i servizi applicativi vengono eseguiti nei container. L’AI usa il fallback locale finché non viene configurato un provider.
+Non sono richiesti Node.js, Python, PostgreSQL, chiavi API né un’installazione manuale di Ollama: tutti i servizi, incluso il modello locale, sono gestiti da Docker Compose. Per un’esperienza fluida è consigliabile assegnare almeno 4 GB di RAM a Docker Desktop.
 
 ### 1. Clonare e configurare
 
@@ -109,7 +112,7 @@ Aprire `.env` e sostituire almeno `POSTGRES_PASSWORD` e `JWT_SECRET_KEY` con val
 docker compose up --build
 ```
 
-Al primo avvio il backend esegue automaticamente la migrazione Alembic e carica i dati demo. Attendere che i servizi siano `healthy`, quindi aprire:
+Al primo avvio `ollama-init` scarica `llama3.2:1b`; questa operazione può richiedere alcuni minuti e una connessione Internet. Il backend avvia subito l’applicazione e usa il fallback deterministico fino a quando il modello non è pronto; il job ritenta automaticamente se il registry di Ollama non fosse momentaneamente raggiungibile. Attendere che `backend`, `frontend`, `postgres` e `ollama` siano `healthy`, quindi aprire:
 
 | Risorsa | Indirizzo |
 | --- | --- |
@@ -144,47 +147,26 @@ Il seed viene eseguito una sola volta sul database inizialmente vuoto.
 
 Vengono creati anche quattro categorie, due ticket e messaggi di esempio. Queste credenziali sono esclusivamente per la demo e non devono essere riutilizzate fuori dall’ambiente locale.
 
-## Configurazione AI
+## Configurazione AI locale
 
-Le variabili di configurazione sono in `.env`. Il comportamento predefinito è sicuro e non richiede chiavi:
-
-```env
-AI_PROVIDER=none
-```
-
-In questa modalità gli endpoint AI rispondono con un fallback locale identificato come `source: "fallback"`.
-
-### OpenAI o API compatibile
-
-Per usare OpenAI:
-
-```env
-AI_PROVIDER=openai
-OPENAI_API_KEY=...
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
-```
-
-Per un provider OpenAI-compatible, ad esempio OpenRouter, impostare `AI_PROVIDER=openai-compatible`, l’URL base e il modello previsti dal provider. Le chiavi restano nel file `.env`, che è ignorato da Git.
-
-### Ollama locale
-
-È incluso un servizio Ollama opzionale, escluso dall’avvio standard per evitare download non richiesti. Per abilitarlo:
-
-```bash
-docker compose --profile ollama up --build
-docker compose exec ollama ollama pull llama3.2
-```
-
-Poi impostare in `.env`:
+Il file `.env.example` è già predisposto per Ollama in locale:
 
 ```env
 AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://ollama:11434
-OLLAMA_MODEL=llama3.2
+OLLAMA_MODEL=llama3.2:1b
+AI_TIMEOUT_SECONDS=120
 ```
 
-Riavviare il backend dopo la modifica della configurazione. Per eseguire Ollama già installato sull’host o su un altro server, impostare `OLLAMA_BASE_URL` sull’indirizzo raggiungibile dal container backend.
+Non cambiare `OLLAMA_BASE_URL` quando si usa Docker Compose: `ollama` è il nome del servizio interno. Il servizio `ollama-init` scarica il modello configurato nella variabile `OLLAMA_MODEL` e lo conserva nel volume Docker `ollama_data`, quindi i successivi avvii non lo riscaricano. Se la rete o il registry di Ollama non sono disponibili, il job continua a ritentare senza bloccare l’applicazione.
+
+Per verificare manualmente il modello:
+
+```bash
+docker compose exec ollama ollama list
+```
+
+Il modello scelto è piccolo abbastanza per una demo su CPU e adatto ai tre compiti richiesti: titolo, priorità e sintesi in italiano. Non viene usata alcuna API cloud né inviata alcuna informazione a servizi esterni.
 
 ## API principali
 
@@ -194,7 +176,7 @@ La documentazione completa e testabile è disponibile in Swagger su `/docs`.
 | --- | --- |
 | Sistema | `GET /health`, `GET /api/health` |
 | Autenticazione | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` |
-| Ticket | `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{id}` |
+| Ticket | `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{id}` — il `POST` crea automaticamente titolo, priorità e sintesi con Ollama |
 | Workflow | `POST /api/tickets/{id}/assign`, `/status`, `/resolve`, `/reopen` |
 | Messaggi | `GET/POST /api/tickets/{id}/messages` |
 | AI | `POST /api/ai/tickets/{id}/classify`, `/suggest-reply` |
@@ -254,7 +236,7 @@ cd ../frontend
 npm run build
 ```
 
-La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket, note interne, assegnazione, risoluzione, dashboard, amministrazione e fallback AI.
+La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket, generazione automatica dei campi AI, note interne, assegnazione, risoluzione, dashboard, amministrazione e fallback AI.
 
 ## Struttura del repository
 
@@ -286,7 +268,7 @@ La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket
 - Le note interne non vengono restituite agli account cliente.
 - Le azioni importanti sono registrate in `audit_logs`.
 - Il progetto non invia email reali e non carica ancora allegati fisici: la tabella è predisposta ma lo storage non è implementato.
-- L’AI può produrre errori o informazioni imprecise: gli output sono solo suggerimenti da verificare dall’operatore.
+- L’AI può produrre classificazioni imprecise: gli operatori devono verificare la priorità assegnata automaticamente.
 - Per un deploy reale occorrono HTTPS, secret manager, rate limiting, backup, osservabilità e password/chiavi diverse da quelle demo.
 
 ## Sviluppi futuri

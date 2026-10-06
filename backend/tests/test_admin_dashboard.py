@@ -32,7 +32,6 @@ def test_dashboard_metrics_are_scoped_to_the_authenticated_customer(client) -> N
         "/api/tickets",
         headers=bearer(first_token),
         json={
-            "title": "Problema dashboard cliente",
             "description": "Il cliente desidera verificare una richiesta di supporto privata.",
         },
     )

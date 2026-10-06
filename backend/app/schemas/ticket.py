@@ -45,10 +45,10 @@ class TicketMessageResponse(BaseModel):
 
 
 class TicketCreateRequest(BaseModel):
-    title: str = Field(min_length=5, max_length=200)
     description: str = Field(min_length=10, max_length=10_000)
     category_id: int | None = Field(default=None, gt=0)
-    priority: TicketPriority = TicketPriority.MEDIUM
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class TicketUpdateRequest(BaseModel):

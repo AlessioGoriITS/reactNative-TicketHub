@@ -25,7 +25,7 @@ def get_staff_ticket(ticket_id: int, current_user: CurrentUser, database: Databa
 def classify_ticket_endpoint(
     ticket_id: int, current_user: CurrentUser, database: DatabaseSession
 ) -> TicketClassificationResponse:
-    """Generate classification suggestions and persist only the summary/priority proposal."""
+    """Recalculate the stored AI summary and priority proposal for a staff member."""
 
     ticket = get_staff_ticket(ticket_id, current_user, database)
     classification = classify_ticket(ticket)

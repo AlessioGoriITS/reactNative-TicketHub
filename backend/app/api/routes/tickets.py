@@ -18,6 +18,7 @@ from app.schemas.ticket import (
     TicketStatusRequest,
     TicketUpdateRequest,
 )
+from app.services.ai import analyze_new_ticket
 from app.services.audit import record_audit_event
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -137,13 +138,16 @@ def create_ticket(
     if payload.category_id is not None:
         category = get_category_or_422(payload.category_id, database)
 
+    analysis = analyze_new_ticket(payload.description.strip())
     ticket = Ticket(
         ticket_number=f"TMP-{secrets.token_hex(8)}",
-        title=payload.title.strip(),
+        title=analysis.title,
         description=payload.description.strip(),
-        priority=payload.priority,
+        priority=analysis.suggested_priority,
         category=category,
         customer=current_user,
+        ai_summary=analysis.summary,
+        ai_suggested_priority=analysis.suggested_priority,
     )
     database.add(ticket)
     database.flush()
@@ -153,7 +157,12 @@ def create_ticket(
         "ticket.created",
         user_id=current_user.id,
         ticket_id=ticket.id,
-        new_value={"ticket_number": ticket.ticket_number, "priority": ticket.priority.value},
+        new_value={
+            "ticket_number": ticket.ticket_number,
+            "priority": ticket.priority.value,
+            "ai_source": analysis.source,
+            "summary_generated": True,
+        },
     )
     database.commit()
     return serialize_ticket_detail(
@@ -185,8 +194,11 @@ def update_ticket(
         return serialize_ticket_detail(ticket, current_user)
 
     staff_member = is_staff(current_user)
-    if not staff_member and {"priority", "category_id"}.intersection(updates):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Non puoi modificare priorità o categoria.")
+    if not staff_member and {"title", "priority", "category_id"}.intersection(updates):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Non puoi modificare titolo, priorità o categoria.",
+        )
     if not staff_member and ticket.status not in {TicketStatus.OPEN, TicketStatus.WAITING_FOR_CUSTOMER}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 import app.models  # noqa: F401
 from app.db.base import Base
 from app.db.session import get_db
+from app.core.config import get_settings
 from app.main import app
 
 
@@ -16,6 +17,16 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+
+
+@pytest.fixture(autouse=True)
+def disable_network_ai(monkeypatch):
+    """Keep the unit suite deterministic; Docker runs the real local Ollama service."""
+
+    monkeypatch.setenv("AI_PROVIDER", "none")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture

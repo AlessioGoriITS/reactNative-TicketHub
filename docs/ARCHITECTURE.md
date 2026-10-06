@@ -14,10 +14,12 @@
                                              │ Porta 5432        │
                                              └───────────────────┘
                                                        │
-                              ┌────────────────────────┴────────────────────┐
-                              ▼                                             ▼
-                   OpenAI-compatible API                          Ollama opzionale
-                   (servizio esterno)                             (profilo Docker)
+                                                       │ HTTP/JSON
+                                                       ▼
+                                             ┌───────────────────┐
+                                             │ Ollama locale     │
+                                             │ llama3.2:1b       │
+                                             └───────────────────┘
 ```
 
 ## Backend
@@ -65,6 +67,8 @@ Le migrazioni sono versionate in `backend/alembic/versions/`. Il backend esegue 
 
 ## Integrazione AI
 
-Gli endpoint AI sono riservati a operatori e amministratori. L’applicazione invia al provider solo titolo e descrizione del ticket e restituisce un output JSON strutturato. Il risultato resta una proposta: l’operatore decide se applicarlo o inviarlo.
+Ollama è un servizio Docker incluso nello stack standard. Al primo avvio il job `ollama-init` scarica il modello `llama3.2:1b` nel volume persistente `ollama_data` e ritenta automaticamente se il registry non è momentaneamente raggiungibile. Il backend non resta bloccato dal download: avvia l’applicazione e usa il fallback finché il modello non è pronto.
 
-Quando il provider manca o restituisce un errore, il servizio usa un fallback deterministico e inserisce una nota esplicativa nella risposta API. Questo evita che un errore esterno blocchi la gestione dei ticket.
+Alla creazione di un ticket il cliente invia soltanto descrizione e categoria facoltativa. Il backend chiede a Ollama un JSON strutturato e salva titolo, priorità e sintesi prima di restituire il ticket. Il payload non accetta `title` o `priority`, e il backend impedisce ai clienti di modificarli in seguito.
+
+Gli endpoint AI per gli operatori restano disponibili per ricalcolare la sintesi e creare bozze di risposta. Se Ollama non risponde, un fallback deterministico consente comunque di aprire il ticket e l’audit log segnala che l’output non è stato generato dal modello.

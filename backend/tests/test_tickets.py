@@ -24,15 +24,16 @@ def test_customer_can_create_list_and_discuss_a_ticket(client) -> None:
         "/api/tickets",
         headers=headers(token),
         json={
-            "title": "Errore durante il login",
             "description": "Dopo l'accesso la pagina visualizza un errore imprevisto.",
-            "priority": "high",
         },
     )
     assert created.status_code == 201
     ticket = created.json()
     assert ticket["ticket_number"] == "TK-000001"
     assert ticket["status"] == "open"
+    assert ticket["priority"] == "medium"
+    assert ticket["title"]
+    assert ticket["ai_summary"]
 
     ticket_list = client.get("/api/tickets?status=open", headers=headers(token))
     assert ticket_list.status_code == 200
@@ -56,7 +57,6 @@ def test_customers_cannot_read_tickets_created_by_other_customers(client) -> Non
         "/api/tickets",
         headers=headers(first_token),
         json={
-            "title": "Richiesta riservata",
             "description": "Questa richiesta non deve essere visibile agli altri clienti.",
         },
     ).json()
@@ -86,7 +86,6 @@ def test_operator_can_assign_resolve_and_add_internal_note(client) -> None:
         "/api/tickets",
         headers=headers(customer_token),
         json={
-            "title": "Impossibile scaricare la fattura",
             "description": "Il pulsante di download non produce alcun file PDF.",
         },
     ).json()
@@ -124,3 +123,19 @@ def test_operator_can_assign_resolve_and_add_internal_note(client) -> None:
     reopened = client.post(f"/api/tickets/{ticket['id']}/reopen", headers=headers(customer_token))
     assert reopened.status_code == 200
     assert reopened.json()["status"] == "open"
+
+
+def test_customer_cannot_set_ticket_title_or_priority_at_creation(client) -> None:
+    token, _ = register_and_token(client, "automatic@example.com")
+
+    response = client.post(
+        "/api/tickets",
+        headers=headers(token),
+        json={
+            "title": "Titolo scelto dal cliente",
+            "description": "Il cliente prova a impostare manualmente i dati classificati dall'AI.",
+            "priority": "urgent",
+        },
+    )
+
+    assert response.status_code == 422

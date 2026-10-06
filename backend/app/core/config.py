@@ -16,13 +16,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     cors_origins: str = "http://localhost:5173"
-    ai_provider: str = "none"
+    ai_provider: str = "ollama"
     openai_api_key: str = ""
     openai_base_url: str = "https://api.openai.com/v1"
     openai_model: str = "gpt-4o-mini"
     ollama_base_url: str = "http://ollama:11434"
-    ollama_model: str = "llama3.2"
-    ai_timeout_seconds: float = 30.0
+    ollama_model: str = "llama3.2:1b"
+    ai_timeout_seconds: float = 120.0
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -10,6 +10,7 @@ from app.models import Ticket, TicketPriority
 
 @dataclass(frozen=True)
 class AIClassification:
+    title: str
     summary: str
     suggested_priority: TicketPriority
     suggested_category: str | None
@@ -37,8 +38,42 @@ def _extract_json(content: str) -> dict[str, object]:
     return decoded
 
 
-def _fallback_classification(ticket: Ticket, notice: str | None = None) -> AIClassification:
-    text = f"{ticket.title} {ticket.description}".lower()
+def _fallback_title(description: str) -> str:
+    """Create a useful title when Ollama is temporarily unavailable."""
+
+    compact_description = re.sub(r"\s+", " ", description).strip()
+    first_sentence = re.split(r"[.!?]\s|\n", compact_description, maxsplit=1)[0].strip()
+    if len(first_sentence) < 5:
+        return "Richiesta di assistenza"
+    return first_sentence[:200].rstrip(" ,;:-")
+
+
+def _normalise_title(value: object, description: str) -> str:
+    title = re.sub(r"\s+", " ", str(value or "")).strip().strip('"')
+    return title[:200].rstrip() if len(title) >= 5 else _fallback_title(description)
+
+
+def _apply_priority_guardrail(priority: TicketPriority, text: str) -> TicketPriority:
+    """Prevent an undersized local model from downgrading clearly critical incidents."""
+
+    normalised_text = text.lower()
+    urgent_signals = ("perdita di dati", "data breach", "violazione", "dati sensibili")
+    high_signals = ("blocc", "produzione", "tutti gli utenti", "tutti i dipendenti", "impossibile")
+    if any(signal in normalised_text for signal in urgent_signals):
+        return TicketPriority.URGENT
+    if any(signal in normalised_text for signal in high_signals) and priority in {
+        TicketPriority.LOW,
+        TicketPriority.MEDIUM,
+    }:
+        return TicketPriority.HIGH
+    return priority
+
+
+def _fallback_classification(
+    description: str, title_hint: str | None = None, notice: str | None = None
+) -> AIClassification:
+    title = _normalise_title(title_hint, description)
+    text = f"{title} {description}".lower()
     if any(term in text for term in ("fattura", "pagamento", "rimborso", "addebito")):
         category = "Fatturazione"
     elif any(term in text for term in ("login", "accesso", "password", "account")):
@@ -48,16 +83,13 @@ def _fallback_classification(ticket: Ticket, notice: str | None = None) -> AICla
     else:
         category = None
 
-    if any(term in text for term in ("urgente", "bloccante", "bloccato", "produzione", "impossibile")):
-        priority = TicketPriority.HIGH
-    else:
-        priority = TicketPriority.MEDIUM
+    priority = _apply_priority_guardrail(TicketPriority.MEDIUM, text)
 
     keywords = [term for term in ("login", "account", "fattura", "pagamento", "errore", "accesso") if term in text]
-    summary = ticket.description.strip().replace("\n", " ")
+    summary = description.strip().replace("\n", " ")
     if len(summary) > 240:
         summary = f"{summary[:237].rstrip()}…"
-    return AIClassification(summary, priority, category, keywords[:5], "fallback", notice)
+    return AIClassification(title, summary, priority, category, keywords[:5], "fallback", notice)
 
 
 def _fallback_reply(ticket: Ticket, notice: str | None = None) -> AIReply:
@@ -109,20 +141,28 @@ def _request_json(messages: list[dict[str, str]]) -> dict[str, object]:
     raise RuntimeError("Nessun provider AI è configurato.")
 
 
-def classify_ticket(ticket: Ticket) -> AIClassification:
-    """Suggest classification metadata without changing ticket data autonomously."""
+def _classify_ticket_content(description: str, title_hint: str | None = None) -> AIClassification:
+    """Generate title, summary and priority from the customer's description."""
 
     messages = [
         {
             "role": "system",
             "content": (
                 "Sei un assistente per un helpdesk italiano. Rispondi soltanto con JSON valido: "
-                '{"summary":"...","suggested_priority":"low|medium|high|urgent",'
+                '{"title":"...","summary":"...","suggested_priority":"low|medium|high|urgent",'
                 '"suggested_category":"... o null","keywords":["..."]}. '
-                "Non inventare informazioni e mantieni il riassunto sotto le 240 battute."
+                "Genera un titolo chiaro di 5-120 caratteri, non inventare informazioni e mantieni "
+                "il riassunto sotto le 240 battute. Considera urgente solo un blocco grave, un rischio "
+                "di sicurezza, una perdita di dati o un impatto diffuso."
             ),
         },
-        {"role": "user", "content": f"Titolo: {ticket.title}\nDescrizione: {ticket.description}"},
+        {
+            "role": "user",
+            "content": (
+                f"Titolo esistente (se presente): {title_hint or 'non disponibile'}\n"
+                f"Descrizione: {description}"
+            ),
+        },
     ]
     try:
         response = _request_json(messages)
@@ -130,12 +170,33 @@ def classify_ticket(ticket: Ticket) -> AIClassification:
         summary = str(response.get("summary", "")).strip()
         if not summary:
             raise ValueError("Riassunto AI mancante.")
+        title = _normalise_title(response.get("title"), description)
+        priority = _apply_priority_guardrail(priority, f"{title} {description}")
         raw_keywords = response.get("keywords", [])
         keywords = [str(keyword).strip() for keyword in raw_keywords if str(keyword).strip()][:5] if isinstance(raw_keywords, list) else []
         category = response.get("suggested_category")
-        return AIClassification(summary[:240], priority, str(category).strip() if category else None, keywords, "ai")
+        return AIClassification(
+            title,
+            summary[:240],
+            priority,
+            str(category).strip() if category else None,
+            keywords,
+            "ai",
+        )
     except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError, RuntimeError) as error:
-        return _fallback_classification(ticket, f"AI non disponibile: {error}")
+        return _fallback_classification(description, title_hint, f"AI non disponibile: {error}")
+
+
+def analyze_new_ticket(description: str) -> AIClassification:
+    """Analyse ticket text before persistence so customers cannot set its priority or title."""
+
+    return _classify_ticket_content(description)
+
+
+def classify_ticket(ticket: Ticket) -> AIClassification:
+    """Recalculate summary and classification metadata for an existing ticket."""
+
+    return _classify_ticket_content(ticket.description, ticket.title)
 
 
 def suggest_reply(ticket: Ticket) -> AIReply:
