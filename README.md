@@ -23,7 +23,7 @@ Il progetto è un monorepo avviabile in locale tramite Docker Compose. Include d
 ### Clienti
 
 - registrazione, login e profilo tramite token JWT;
-- apertura di ticket con sola descrizione e categoria facoltativa;
+- apertura di ticket con la sola descrizione;
 - ricerca, filtri e storico dei propri ticket;
 - conversazione con il supporto;
 - riapertura di un ticket risolto;
@@ -52,8 +52,9 @@ L’AI è integrata nel backend, non nel browser. Alla creazione di un ticket il
 - titolo del ticket generato automaticamente;
 - priorità `low`, `medium`, `high` o `urgent`;
 - sintesi breve salvata nel ticket.
+- categoria scelta tra quelle attive configurate dall’amministratore.
 
-Il cliente non può inviare né modificare titolo e priorità: queste proprietà sono calcolate dal backend e salvate insieme al ticket. Un operatore può ricalcolare la sintesi e ottenere una bozza di risposta; quest’ultima non viene mai inviata automaticamente.
+Il cliente non può inviare né modificare titolo, priorità o categoria: queste proprietà sono calcolate dal backend e salvate insieme al ticket. Se non viene individuata una categoria affidabile, la categoria resta non specificata. Un operatore può ricalcolare la sintesi e ottenere una bozza di risposta; quest’ultima non viene mai inviata automaticamente.
 
 Docker Compose avvia Ollama e scarica automaticamente il modello `llama3.2:1b` al primo avvio. Se il servizio o il modello non fosse momentaneamente disponibile, il backend applica un fallback deterministico, registra la fonte nell’audit log e continua a creare il ticket senza bloccare il cliente.
 
@@ -74,7 +75,7 @@ React + TypeScript + Vite ───────► FastAPI REST API ────
 | Backend | Python, FastAPI, SQLAlchemy, Alembic | API REST, regole di business, ruoli, audit e AI |
 | Database | PostgreSQL 16 | utenti, categorie, ticket, messaggi, allegati e audit log |
 | Container | Docker Compose, Nginx | avvio coerente dei servizi e distribuzione del frontend |
-| AI | Ollama + `llama3.2:1b` | titolo, priorità e sintesi automatica dei ticket |
+| AI | Ollama + `llama3.2:1b` | titolo, priorità, sintesi e categoria automatica dei ticket |
 
 Per i dettagli dei flussi e della struttura dei dati, consultare [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
@@ -133,7 +134,7 @@ I dati PostgreSQL sono persistenti. Per rimuoverli e ripartire da zero:
 docker compose down -v
 ```
 
-Sono disponibili anche i comandi `make up`, `make down`, `make logs`, `make build` e `make test` nei sistemi che includono `make`.
+Sono disponibili anche i comandi `make up`, `make down`, `make logs` e `make build` nei sistemi che includono `make`.
 
 ## Account e dati demo
 
@@ -176,7 +177,7 @@ La documentazione completa e testabile è disponibile in Swagger su `/docs`.
 | --- | --- |
 | Sistema | `GET /health`, `GET /api/health` |
 | Autenticazione | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` |
-| Ticket | `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{id}` — il `POST` crea automaticamente titolo, priorità e sintesi con Ollama |
+| Ticket | `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{id}` — il `POST` crea automaticamente titolo, priorità, sintesi e categoria con Ollama |
 | Workflow | `POST /api/tickets/{id}/assign`, `/status`, `/resolve`, `/reopen` |
 | Messaggi | `GET/POST /api/tickets/{id}/messages` |
 | AI | `POST /api/ai/tickets/{id}/classify`, `/suggest-reply` |
@@ -236,7 +237,7 @@ cd ../frontend
 npm run build
 ```
 
-La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket, generazione automatica dei campi AI, note interne, assegnazione, risoluzione, dashboard, amministrazione e fallback AI.
+La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket, generazione automatica di titolo, priorità, sintesi e categoria, note interne, assegnazione, risoluzione, dashboard, amministrazione e fallback AI.
 
 ## Struttura del repository
 
@@ -268,7 +269,7 @@ La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket
 - Le note interne non vengono restituite agli account cliente.
 - Le azioni importanti sono registrate in `audit_logs`.
 - Il progetto non invia email reali e non carica ancora allegati fisici: la tabella è predisposta ma lo storage non è implementato.
-- L’AI può produrre classificazioni imprecise: gli operatori devono verificare la priorità assegnata automaticamente.
+- L’AI può produrre classificazioni imprecise: gli operatori devono verificare priorità e categoria assegnate automaticamente.
 - Per un deploy reale occorrono HTTPS, secret manager, rate limiting, backup, osservabilità e password/chiavi diverse da quelle demo.
 
 ## Sviluppi futuri
