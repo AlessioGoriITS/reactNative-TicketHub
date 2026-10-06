@@ -125,7 +125,7 @@ export function TicketDetailPage() {
         <div className="ticket-hero-main">
           <p className="ticket-number">{ticket.ticket_number}</p>
           <h1>{ticket.title}</h1>
-          <div className="ticket-meta"><StatusBadge status={ticket.status} /><PriorityBadge priority={ticket.priority} />{ticket.category && <span className="category-chip">{ticket.category.name}</span>}</div>
+          <div className="ticket-meta"><StatusBadge status={ticket.status} /><PriorityBadge priority={ticket.priority} />{ticket.category && <span className="category-chip">{ticket.category.name}</span>}{ticket.product && <span className="product-chip">{ticket.product.name}</span>}</div>
         </div>
         <div className="ticket-actions">
           {isStaff && <button className="button button-secondary" type="button" disabled={sending} onClick={() => void requestAi('classify')}>Aggiorna sintesi</button>}
@@ -163,7 +163,7 @@ export function TicketDetailPage() {
           </section>
         </div>
         <aside className="page-stack">
-          <section className="panel metadata-card"><h2>Dettagli</h2><dl><div><dt>Cliente</dt><dd>{ticket.customer.name}</dd></div><div><dt>Assegnato a</dt><dd>{ticket.assigned_to?.name ?? 'Non assegnato'}</dd></div><div><dt>Creato il</dt><dd>{formatDateTime(ticket.created_at)}</dd></div><div><dt>Ultimo aggiornamento</dt><dd>{formatDateTime(ticket.updated_at)}</dd></div>{ticket.resolved_at && <div><dt>Risolto il</dt><dd>{formatDateTime(ticket.resolved_at)}</dd></div>}</dl></section>
+          <section className="panel metadata-card"><h2>Dettagli</h2><dl><div><dt>Prodotto</dt><dd>{ticket.product?.name ?? 'Non specificato'}</dd></div><div><dt>Cliente</dt><dd>{ticket.customer.name}</dd></div><div><dt>Assegnato a</dt><dd>{ticket.assigned_to?.name ?? 'Non assegnato'}</dd></div><div><dt>Creato il</dt><dd>{formatDateTime(ticket.created_at)}</dd></div><div><dt>Ultimo aggiornamento</dt><dd>{formatDateTime(ticket.updated_at)}</dd></div>{ticket.resolved_at && <div><dt>Risolto il</dt><dd>{formatDateTime(ticket.resolved_at)}</dd></div>}</dl></section>
           {ticket.ai_summary && <section className="panel ai-card"><p className="eyebrow">RIEPILOGO</p><h2>Sintesi della richiesta</h2><p>{ticket.ai_summary}</p></section>}
         </aside>
       </div>

@@ -73,10 +73,11 @@ export function TicketsPage() {
             <div className="empty-state"><h3>Nessun risultato</h3><p>Prova a modificare i filtri oppure apri un nuovo ticket.</p></div>
           ) : (
             <div className="ticket-table" role="table">
-              <div className="ticket-row ticket-header" role="row"><span>Ticket</span><span>Stato</span><span>Priorità</span><span>Assegnato a</span></div>
+              <div className="ticket-row ticket-header" role="row"><span>Ticket</span><span>Prodotto</span><span>Stato</span><span>Priorità</span><span>Assegnato a</span></div>
               {data.items.map((ticket) => (
                 <Link className="ticket-row" role="row" to={`/tickets/${ticket.id}`} key={ticket.id}>
                   <span><strong>{ticket.ticket_number}</strong><small>{ticket.title}</small></span>
+                  <span>{ticket.product?.name ?? '—'}</span>
                   <StatusBadge status={ticket.status} />
                   <PriorityBadge priority={ticket.priority} />
                   <span>{ticket.assigned_to?.name ?? 'Non assegnato'}</span>

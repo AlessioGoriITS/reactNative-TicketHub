@@ -48,6 +48,7 @@ class Ticket(Base):
         default=TicketPriority.MEDIUM,
     )
     category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"))
+    product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id", ondelete="SET NULL"))
     customer_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     assigned_to_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     ai_summary: Mapped[str | None] = mapped_column(Text)
@@ -68,6 +69,7 @@ class Ticket(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     category: Mapped["Category | None"] = relationship(back_populates="tickets")
+    product: Mapped["Product | None"] = relationship(back_populates="tickets")
     customer: Mapped["User"] = relationship(back_populates="created_tickets", foreign_keys=[customer_id])
     assigned_to: Mapped["User | None"] = relationship(
         back_populates="assigned_tickets", foreign_keys=[assigned_to_id]

@@ -57,6 +57,7 @@ Le entità principali sono:
 users ──< tickets (customer_id)
 users ──< tickets (assigned_to_id)
 categories ──< tickets
+products ──< tickets
 tickets ──< ticket_messages ──> users
 tickets ──< attachments
 tickets ──< audit_logs
@@ -69,6 +70,8 @@ Le migrazioni sono versionate in `backend/alembic/versions/`. Il backend esegue 
 
 Ollama è un servizio Docker incluso nello stack standard. Al primo avvio il job `ollama-init` scarica il modello `llama3.2:1b` nel volume persistente `ollama_data` e ritenta automaticamente se il registry non è momentaneamente raggiungibile. Il backend non resta bloccato dal download: avvia l’applicazione e usa il fallback finché il modello non è pronto.
 
-Alla creazione di un ticket il cliente invia soltanto descrizione e categoria facoltativa. Il backend chiede a Ollama un JSON strutturato e salva titolo, priorità e sintesi prima di restituire il ticket. Il payload non accetta `title` o `priority`, e il backend impedisce ai clienti di modificarli in seguito.
+Alla creazione di un ticket il cliente seleziona un prodotto del catalogo demo e invia la descrizione. Il backend chiede a Ollama un JSON strutturato e salva titolo, priorità, sintesi e categoria prima di restituire il ticket. La categoria è scelta soltanto tra quelle attive configurate dall’amministratore. Il payload non accetta `title`, `priority` o `category_id`, e il backend impedisce ai clienti di modificarli in seguito.
+
+Il catalogo è esposto tramite `GET /api/products`; il seed inizializza quattro prodotti fittizi per dimostrare un flusso di assistenza multi-prodotto. Il prodotto è richiesto dalla web app, mentre l’API lo mantiene facoltativo per consentire ticket generici e non interrompere integrazioni esistenti.
 
 Gli endpoint AI per gli operatori restano disponibili per ricalcolare la sintesi e creare bozze di risposta. Se Ollama non risponde, un fallback deterministico consente comunque di aprire il ticket e l’audit log segnala che l’output non è stato generato dal modello.

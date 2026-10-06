@@ -23,6 +23,16 @@ class CategoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProductResponse(BaseModel):
+    id: int
+    code: str
+    name: str
+    description: str | None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class CategoryCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     description: str | None = Field(default=None, max_length=500)
@@ -46,6 +56,7 @@ class TicketMessageResponse(BaseModel):
 
 class TicketCreateRequest(BaseModel):
     description: str = Field(min_length=10, max_length=10_000)
+    product_id: int | None = Field(default=None, gt=0)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -54,6 +65,7 @@ class TicketUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=5, max_length=200)
     description: str | None = Field(default=None, min_length=10, max_length=10_000)
     category_id: int | None = Field(default=None, gt=0)
+    product_id: int | None = Field(default=None, gt=0)
     priority: TicketPriority | None = None
 
 
@@ -77,6 +89,7 @@ class TicketListItemResponse(BaseModel):
     status: TicketStatus
     priority: TicketPriority
     category: CategoryResponse | None
+    product: ProductResponse | None
     customer: UserSummary
     assigned_to: UserSummary | None
     created_at: datetime

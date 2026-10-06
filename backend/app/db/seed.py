@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import SessionLocal
-from app.models import Category, Ticket, TicketMessage, TicketPriority, TicketStatus, User, UserRole
+from app.models import Category, Product, Ticket, TicketMessage, TicketPriority, TicketStatus, User, UserRole
 
 DEMO_PASSWORD = "TicketHubDemo2026!"
 
@@ -17,6 +17,15 @@ def get_or_create_user(
     if database_user is not None:
         return database_user
     return User(name=name, email=email, role=role, password_hash=hash_password(DEMO_PASSWORD))
+
+
+def get_or_create_product(database, code: str, name: str, description: str) -> Product:
+    existing_product = database.scalar(select(Product).where(Product.code == code))
+    if existing_product is not None:
+        return existing_product
+    product = Product(code=code, name=name, description=description)
+    database.add(product)
+    return product
 
 
 def seed() -> None:
@@ -35,6 +44,12 @@ def seed() -> None:
             if user is not None:
                 user.email = valid_email
 
+        products = [
+            get_or_create_product(database, "DESK", "TicketHub Desk", "Portale web per l’assistenza clienti."),
+            get_or_create_product(database, "MOBILE", "TicketHub Mobile", "App mobile per clienti e operatori."),
+            get_or_create_product(database, "INSIGHTS", "TicketHub Insights", "Dashboard e reportistica operativa."),
+            get_or_create_product(database, "CONNECT", "TicketHub Connect API", "API per integrare TicketHub con servizi esterni."),
+        ]
         database.flush()
         if database.scalar(select(User.id).limit(1)) is not None:
             database.commit()
@@ -59,6 +74,7 @@ def seed() -> None:
             status=TicketStatus.IN_PROGRESS,
             priority=TicketPriority.HIGH,
             category=technical,
+            product=products[0],
             customer=customer,
             assigned_to=agent,
             ai_summary="Il cliente segnala un ciclo di reindirizzamento dopo l'autenticazione.",
@@ -71,6 +87,7 @@ def seed() -> None:
             status=TicketStatus.OPEN,
             priority=TicketPriority.MEDIUM,
             category=billing,
+            product=products[2],
             customer=customer,
             ai_summary="Richiesta amministrativa per la duplicazione di una fattura.",
             ai_suggested_priority=TicketPriority.LOW,

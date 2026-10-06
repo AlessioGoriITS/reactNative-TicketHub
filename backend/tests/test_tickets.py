@@ -1,6 +1,6 @@
 from conftest import TestingSessionLocal
 
-from app.models import User, UserRole
+from app.models import Product, User, UserRole
 
 
 def register_and_token(client, email: str, name: str = "Cliente Ticket") -> tuple[str, int]:
@@ -49,6 +49,31 @@ def test_customer_can_create_list_and_discuss_a_ticket(client) -> None:
     detail = client.get(f"/api/tickets/{ticket['id']}", headers=headers(token))
     assert detail.status_code == 200
     assert len(detail.json()["messages"]) == 1
+
+
+def test_customer_can_associate_a_ticket_with_a_demo_product(client) -> None:
+    token, _ = register_and_token(client, "product-customer@example.com")
+    with TestingSessionLocal() as database:
+        product = Product(code="MOBILE", name="TicketHub Mobile", description="App mobile demo")
+        database.add(product)
+        database.commit()
+        product_id = product.id
+
+    products = client.get("/api/products", headers=headers(token))
+    assert products.status_code == 200
+    assert products.json()[0]["code"] == "MOBILE"
+
+    created = client.post(
+        "/api/tickets",
+        headers=headers(token),
+        json={
+            "product_id": product_id,
+            "description": "L'app mobile non mostra gli aggiornamenti del mio ticket.",
+        },
+    )
+
+    assert created.status_code == 201
+    assert created.json()["product"]["name"] == "TicketHub Mobile"
 
 
 def test_customers_cannot_read_tickets_created_by_other_customers(client) -> None:

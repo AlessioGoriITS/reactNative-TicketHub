@@ -18,6 +18,14 @@ export interface Category {
   is_active?: boolean
 }
 
+export interface Product {
+  id: number
+  code: string
+  name: string
+  description: string | null
+  is_active?: boolean
+}
+
 export interface TicketMessage {
   id: number
   body: string
@@ -34,6 +42,7 @@ export interface Ticket {
   status: TicketStatus
   priority: TicketPriority
   category: Category | null
+  product: Product | null
   customer: User
   assigned_to: User | null
   created_at: string

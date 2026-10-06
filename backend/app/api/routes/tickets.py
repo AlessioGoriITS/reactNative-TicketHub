@@ -6,7 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, DatabaseSession
-from app.models import Category, Ticket, TicketMessage, TicketPriority, TicketStatus, User, UserRole
+from app.models import Category, Product, Ticket, TicketMessage, TicketPriority, TicketStatus, User, UserRole
 from app.schemas.ticket import (
     TicketAssignRequest,
     TicketCreateRequest,
@@ -31,6 +31,7 @@ def is_staff(user: User) -> bool:
 def ticket_options(include_messages: bool = False):
     options = [
         selectinload(Ticket.category),
+        selectinload(Ticket.product),
         selectinload(Ticket.customer),
         selectinload(Ticket.assigned_to),
     ]
@@ -62,6 +63,13 @@ def get_category_or_422(category_id: int, database: DatabaseSession) -> Category
     if category is None or not category.is_active:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Categoria non valida.")
     return category
+
+
+def get_product_or_422(product_id: int, database: DatabaseSession) -> Product:
+    product = database.get(Product, product_id)
+    if product is None or not product.is_active:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Prodotto non valido.")
+    return product
 
 
 def get_automatic_category(suggested_name: str | None, database: DatabaseSession) -> Category | None:
@@ -150,12 +158,14 @@ def create_ticket(
         )
     analysis = analyze_new_ticket(payload.description.strip(), get_active_category_names(database))
     category = get_automatic_category(analysis.suggested_category, database)
+    product = get_product_or_422(payload.product_id, database) if payload.product_id is not None else None
     ticket = Ticket(
         ticket_number=f"TMP-{secrets.token_hex(8)}",
         title=analysis.title,
         description=payload.description.strip(),
         priority=analysis.suggested_priority,
         category=category,
+        product=product,
         customer=current_user,
         ai_summary=analysis.summary,
         ai_suggested_priority=analysis.suggested_priority,
@@ -172,6 +182,7 @@ def create_ticket(
             "ticket_number": ticket.ticket_number,
             "priority": ticket.priority.value,
             "category": ticket.category.name if ticket.category else None,
+            "product": ticket.product.name if ticket.product else None,
             "ai_source": analysis.source,
             "summary_generated": True,
         },
@@ -206,10 +217,10 @@ def update_ticket(
         return serialize_ticket_detail(ticket, current_user)
 
     staff_member = is_staff(current_user)
-    if not staff_member and {"title", "priority", "category_id"}.intersection(updates):
+    if not staff_member and {"title", "priority", "category_id", "product_id"}.intersection(updates):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Non puoi modificare titolo, priorità o categoria.",
+            detail="Non puoi modificare titolo, priorità, categoria o prodotto.",
         )
     if not staff_member and ticket.status not in {TicketStatus.OPEN, TicketStatus.WAITING_FOR_CUSTOMER}:
         raise HTTPException(
@@ -221,6 +232,9 @@ def update_ticket(
     if "category_id" in updates:
         category_id = updates.pop("category_id")
         ticket.category = get_category_or_422(category_id, database) if category_id is not None else None
+    if "product_id" in updates:
+        product_id = updates.pop("product_id")
+        ticket.product = get_product_or_422(product_id, database) if product_id is not None else None
     for field, value in updates.items():
         setattr(ticket, field, value.strip() if isinstance(value, str) else value)
 

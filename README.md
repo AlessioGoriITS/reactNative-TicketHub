@@ -23,7 +23,7 @@ Il progetto è un monorepo avviabile in locale tramite Docker Compose. Include d
 ### Clienti
 
 - registrazione, login e profilo tramite token JWT;
-- apertura di ticket con la sola descrizione;
+- apertura di ticket per un prodotto demo, con la sola descrizione del problema;
 - ricerca, filtri e storico dei propri ticket;
 - conversazione con il supporto;
 - riapertura di un ticket risolto;
@@ -178,6 +178,7 @@ La documentazione completa e testabile è disponibile in Swagger su `/docs`.
 | Sistema | `GET /health`, `GET /api/health` |
 | Autenticazione | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` |
 | Ticket | `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{id}` — il `POST` crea automaticamente titolo, priorità, sintesi e categoria con Ollama |
+| Prodotti | `GET /api/products` — catalogo dei prodotti demo selezionabili all’apertura di un ticket |
 | Workflow | `POST /api/tickets/{id}/assign`, `/status`, `/resolve`, `/reopen` |
 | Messaggi | `GET/POST /api/tickets/{id}/messages` |
 | AI | `POST /api/ai/tickets/{id}/classify`, `/suggest-reply` |
@@ -237,7 +238,7 @@ cd ../frontend
 npm run build
 ```
 
-La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket, generazione automatica di titolo, priorità, sintesi e categoria, note interne, assegnazione, risoluzione, dashboard, amministrazione e fallback AI.
+La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket, associazione a un prodotto demo, generazione automatica di titolo, priorità, sintesi e categoria, note interne, assegnazione, risoluzione, dashboard, amministrazione e fallback AI.
 
 ## Struttura del repository
 
@@ -261,6 +262,17 @@ La suite backend copre registrazione, login, token, ruoli, isolamento dei ticket
 ├── Makefile                   # comandi di servizio opzionali
 └── PIANO_PROGETTO_TICKETHUB.md
 ```
+
+## Catalogo prodotti demo
+
+Per rendere la demo più realistica, ogni nuovo ticket creato dalla web app è collegato a uno dei prodotti di esempio inizializzati dal seed:
+
+- `TicketHub Desk`: portale web per l’assistenza clienti;
+- `TicketHub Mobile`: app mobile per clienti e operatori;
+- `TicketHub Insights`: dashboard e reportistica operativa;
+- `TicketHub Connect API`: API per integrare TicketHub con servizi esterni.
+
+I prodotti sono dati fittizi e servono esclusivamente a simulare un contesto di assistenza multi-prodotto. L’associazione resta facoltativa a livello API per compatibilità con ticket generici, ma è richiesta nella web app.
 
 ## Sicurezza e limiti
 
