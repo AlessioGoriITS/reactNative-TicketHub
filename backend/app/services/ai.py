@@ -141,7 +141,9 @@ def _request_json(messages: list[dict[str, str]]) -> dict[str, object]:
     raise RuntimeError("Nessun provider AI è configurato.")
 
 
-def _classify_ticket_content(description: str, title_hint: str | None = None) -> AIClassification:
+def _classify_ticket_content(
+    description: str, title_hint: str | None = None, available_categories: list[str] | None = None
+) -> AIClassification:
     """Generate title, summary and priority from the customer's description."""
 
     messages = [
@@ -153,7 +155,9 @@ def _classify_ticket_content(description: str, title_hint: str | None = None) ->
                 '"suggested_category":"... o null","keywords":["..."]}. '
                 "Genera un titolo chiaro di 5-120 caratteri, non inventare informazioni e mantieni "
                 "il riassunto sotto le 240 battute. Considera urgente solo un blocco grave, un rischio "
-                "di sicurezza, una perdita di dati o un impatto diffuso."
+                "di sicurezza, una perdita di dati o un impatto diffuso. "
+                f"Per suggested_category usa esclusivamente uno di questi valori esatti o null: "
+                f"{', '.join(available_categories or []) or 'null'}."
             ),
         },
         {
@@ -187,16 +191,16 @@ def _classify_ticket_content(description: str, title_hint: str | None = None) ->
         return _fallback_classification(description, title_hint, f"AI non disponibile: {error}")
 
 
-def analyze_new_ticket(description: str) -> AIClassification:
-    """Analyse ticket text before persistence so customers cannot set its priority or title."""
+def analyze_new_ticket(description: str, available_categories: list[str]) -> AIClassification:
+    """Analyse a new ticket before persistence using the configured category taxonomy."""
 
-    return _classify_ticket_content(description)
+    return _classify_ticket_content(description, available_categories=available_categories)
 
 
-def classify_ticket(ticket: Ticket) -> AIClassification:
+def classify_ticket(ticket: Ticket, available_categories: list[str]) -> AIClassification:
     """Recalculate summary and classification metadata for an existing ticket."""
 
-    return _classify_ticket_content(ticket.description, ticket.title)
+    return _classify_ticket_content(ticket.description, ticket.title, available_categories)
 
 
 def suggest_reply(ticket: Ticket) -> AIReply:

@@ -61,7 +61,7 @@ export function AppLayout() {
             <strong>{pageName}</strong>
           </div>
           <div className="workspace-actions">
-            <span className="ai-status"><i aria-hidden="true" />AI locale attiva</span>
+            <span className="ai-status"><i aria-hidden="true" />Gestione richieste attiva</span>
             <div className="header-user"><span className="avatar" aria-hidden="true">{session?.user.name.slice(0, 1).toUpperCase()}</span><span>{session?.user.name}</span></div>
           </div>
         </header>

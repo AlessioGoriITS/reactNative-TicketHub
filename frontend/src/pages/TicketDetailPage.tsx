@@ -94,13 +94,13 @@ export function TicketDetailPage() {
     try {
       if (action === 'classify') {
         const response = await apiRequest<AiClassificationResponse>(`/ai/tickets/${ticket.id}/classify`, { method: 'POST', token: session?.token })
-        setAiNotice(response.notice ?? (response.source === 'ai' ? 'Analisi AI aggiornata.' : 'Analisi generata dal fallback locale.'))
+        setAiNotice('Sintesi aggiornata.')
         await loadTicket()
       } else {
         const response = await apiRequest<AiReplyResponse>(`/ai/tickets/${ticket.id}/suggest-reply`, { method: 'POST', token: session?.token })
         setReply(response.reply)
         setInternal(false)
-        setAiNotice(response.notice ?? (response.source === 'ai' ? 'Bozza AI inserita nel messaggio.' : 'Bozza generata dal fallback locale.'))
+        setAiNotice('Bozza inserita nel messaggio.')
       }
     } catch (requestError) {
       setError(getErrorMessage(requestError))
@@ -128,7 +128,7 @@ export function TicketDetailPage() {
           <div className="ticket-meta"><StatusBadge status={ticket.status} /><PriorityBadge priority={ticket.priority} />{ticket.category && <span className="category-chip">{ticket.category.name}</span>}</div>
         </div>
         <div className="ticket-actions">
-          {isStaff && <button className="button button-secondary" type="button" disabled={sending} onClick={() => void requestAi('classify')}>Ricalcola sintesi AI</button>}
+          {isStaff && <button className="button button-secondary" type="button" disabled={sending} onClick={() => void requestAi('classify')}>Aggiorna sintesi</button>}
           {canResolve && <button className="button button-primary" type="button" disabled={sending} onClick={() => void performAction('resolve')}>Segna come risolto</button>}
           {canReopen && <button className="button button-secondary" type="button" disabled={sending} onClick={() => void performAction('reopen')}>Riapri ticket</button>}
         </div>
@@ -164,7 +164,7 @@ export function TicketDetailPage() {
         </div>
         <aside className="page-stack">
           <section className="panel metadata-card"><h2>Dettagli</h2><dl><div><dt>Cliente</dt><dd>{ticket.customer.name}</dd></div><div><dt>Assegnato a</dt><dd>{ticket.assigned_to?.name ?? 'Non assegnato'}</dd></div><div><dt>Creato il</dt><dd>{formatDateTime(ticket.created_at)}</dd></div><div><dt>Ultimo aggiornamento</dt><dd>{formatDateTime(ticket.updated_at)}</dd></div>{ticket.resolved_at && <div><dt>Risolto il</dt><dd>{formatDateTime(ticket.resolved_at)}</dd></div>}</dl></section>
-          {ticket.ai_summary && <section className="panel ai-card"><p className="eyebrow">ANALISI AUTOMATICA</p><h2>Sintesi AI</h2><p>{ticket.ai_summary}</p></section>}
+          {ticket.ai_summary && <section className="panel ai-card"><p className="eyebrow">RIEPILOGO</p><h2>Sintesi della richiesta</h2><p>{ticket.ai_summary}</p></section>}
         </aside>
       </div>
     </section>

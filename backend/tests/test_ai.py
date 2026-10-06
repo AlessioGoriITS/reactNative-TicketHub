@@ -1,6 +1,7 @@
 from conftest import TestingSessionLocal
 
-from app.models import User, UserRole
+from app.api.routes.tickets import get_active_category_names, get_automatic_category
+from app.models import Category, User, UserRole
 from app.services import ai as ai_service
 
 
@@ -61,6 +62,11 @@ def test_ticket_creation_persists_title_priority_and_summary_generated_by_ai(cli
         },
     )
     customer_token, _ = register(client, "creation-ai@example.com", "Cliente Creazione AI")
+    with TestingSessionLocal() as database:
+        database.add(Category(name="Problema tecnico", description="Errori applicativi"))
+        database.commit()
+        assert get_active_category_names(database) == ["Problema tecnico"]
+        assert get_automatic_category("Problema tecnico", database) is not None
 
     created = client.post(
         "/api/tickets",
@@ -74,3 +80,4 @@ def test_ticket_creation_persists_title_priority_and_summary_generated_by_ai(cli
     assert ticket["priority"] == "high"
     assert ticket["ai_suggested_priority"] == "high"
     assert ticket["ai_summary"] == "Il portale non consente più l'accesso agli utenti del cliente."
+    assert ticket["category"]["name"] == "Problema tecnico"

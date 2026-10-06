@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, DatabaseSession
-from app.api.routes.tickets import is_staff
+from app.api.routes.tickets import get_active_category_names, get_automatic_category, is_staff
 from app.models import Ticket
 from app.schemas.ai import SuggestedReplyResponse, TicketClassificationResponse
 from app.services.ai import classify_ticket, suggest_reply
@@ -28,15 +28,20 @@ def classify_ticket_endpoint(
     """Recalculate the stored AI summary and priority proposal for a staff member."""
 
     ticket = get_staff_ticket(ticket_id, current_user, database)
-    classification = classify_ticket(ticket)
+    classification = classify_ticket(ticket, get_active_category_names(database))
     ticket.ai_summary = classification.summary
     ticket.ai_suggested_priority = classification.suggested_priority
+    ticket.category = get_automatic_category(classification.suggested_category, database)
     record_audit_event(
         database,
         "ticket.ai_classified",
         user_id=current_user.id,
         ticket_id=ticket.id,
-        new_value={"source": classification.source, "priority": classification.suggested_priority.value},
+        new_value={
+            "source": classification.source,
+            "priority": classification.suggested_priority.value,
+            "category": ticket.category.name if ticket.category else None,
+        },
     )
     database.commit()
     return TicketClassificationResponse(

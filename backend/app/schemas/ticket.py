@@ -46,7 +46,6 @@ class TicketMessageResponse(BaseModel):
 
 class TicketCreateRequest(BaseModel):
     description: str = Field(min_length=10, max_length=10_000)
-    category_id: int | None = Field(default=None, gt=0)
 
     model_config = ConfigDict(extra="forbid")
 

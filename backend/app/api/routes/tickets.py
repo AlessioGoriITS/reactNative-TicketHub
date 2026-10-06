@@ -64,6 +64,20 @@ def get_category_or_422(category_id: int, database: DatabaseSession) -> Category
     return category
 
 
+def get_automatic_category(suggested_name: str | None, database: DatabaseSession) -> Category | None:
+    """Match an automatic classification to an active, administrator-managed category."""
+
+    if not suggested_name:
+        return None
+    suggested_key = suggested_name.strip().casefold()
+    categories = database.scalars(select(Category).where(Category.is_active.is_(True))).all()
+    return next((category for category in categories if category.name.casefold() == suggested_key), None)
+
+
+def get_active_category_names(database: DatabaseSession) -> list[str]:
+    return list(database.scalars(select(Category.name).where(Category.is_active.is_(True)).order_by(Category.name)))
+
+
 def serialize_ticket_detail(ticket: Ticket, current_user: User) -> TicketDetailResponse:
     """Serialize a ticket while preventing customers from seeing internal notes."""
 
@@ -134,11 +148,8 @@ def create_ticket(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="I ticket possono essere aperti dagli account cliente.",
         )
-    category = None
-    if payload.category_id is not None:
-        category = get_category_or_422(payload.category_id, database)
-
-    analysis = analyze_new_ticket(payload.description.strip())
+    analysis = analyze_new_ticket(payload.description.strip(), get_active_category_names(database))
+    category = get_automatic_category(analysis.suggested_category, database)
     ticket = Ticket(
         ticket_number=f"TMP-{secrets.token_hex(8)}",
         title=analysis.title,
@@ -160,6 +171,7 @@ def create_ticket(
         new_value={
             "ticket_number": ticket.ticket_number,
             "priority": ticket.priority.value,
+            "category": ticket.category.name if ticket.category else None,
             "ai_source": analysis.source,
             "summary_generated": True,
         },
